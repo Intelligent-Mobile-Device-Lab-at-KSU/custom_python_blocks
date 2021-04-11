@@ -63,7 +63,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
 
         self.last_switch = time.time()
 
-    def transition(self, t):
+    def transition(self):
         now = time.time()
         if(now - self.last_switch > self.dwell_time):
             # update timer
@@ -92,9 +92,6 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
             output_items[0][x] = complex(real, imag)
 
         # check for transition
-        if(self.transition(.4)):
-            self.jumps = self.jumps + 1
-            current = self.jumps%self.num
-            self.freq = self.base + (self.upper*current)
+        self.transition()
 
         return len(output_items[0])
