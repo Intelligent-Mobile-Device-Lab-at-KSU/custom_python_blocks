@@ -113,7 +113,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>1e4</value>
+      <value>10e3</value>
     </param>
   </block>
   <block>
@@ -194,7 +194,7 @@
     </param>
     <param>
       <key>file</key>
-      <value>C:\Users\tstan\Documents\repos\research\frequency_jumping_rfid\jumping_freq\data\4_freq_test.dat</value>
+      <value>C:\Users\tstan\Documents\repos\research\frequency_jumping_rfid\jumping_freq\data\wavy.dat</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -283,54 +283,54 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
             in_sig=None, # no input
             out_sig=[np.complex64]       # have a dummy output
         )
-        self.samp_rate = long(sample_frequency)
+        self.fs = long(sample_frequency)
         self.message_port_register_out(pmt.intern('debug'))  # port to send on
 
         # setup loadins
         self.frequencies = frequencies
+        for i in range (num_frequencies):
+            self.frequencies[i] = self.frequencies[i] * 2 * np.pi
+        print(self.frequencies)
         self.num_frequencies = num_frequencies
         self.dwell_time = dwell_time
         self.index = 0
 
         # setup initial frequency stuff
         self.freq = self.frequencies[0]
-        self.sample_rate = 1/sample_frequency
 
-        self.last_switch = time.time()
+        self.time = 0
 
     def transition(self, t):
-        now = time.time()
-        if(now - self.last_switch &gt; self.dwell_time):
-            # update timer
-            self.last_switch = now
-
+        if(self.time - self.dwell_time &gt;= 0):
             # get frequency
             self.index = self.index + 1 
             if (self.index &gt;= self.num_frequencies):
                 self.index = 0 
             self.freq = self.frequencies[self.index]
+
+            # update control vars
+            self.diff = self.diff + self.time
+            self.time = 0
         else:
-            return False
+            self.time = self.time + t
 
     def work(self, input_items, output_items):
         """example: multiply with constant"""
-
-        temp = 1.0/self.samp_rate
+        # subtract by this, helps restart when switching 
+        # freqs
+        self.diff = 0
 
         # Frequency Calculations -- fill in entire array
         # checks for this happen frequently
-        f = 2*np.pi*self.freq
-        for x in range(len(output_items[0])):
-            time = x * temp
-            imag = np.sin(f*time)
-            real = np.cos(f*time)
+        l = len(output_items[0])
+        for x in range(l):
+            t = (x / self.fs)
+            
+            imag = np.sin(self.freq*t)
+            real = np.cos(self.freq*t)
             output_items[0][x] = complex(real, imag)
-
-        # check for transition
-        if(self.transition(.4)):
-            self.jumps = self.jumps + 1
-            current = self.jumps%self.num
-            self.freq = self.base + (self.upper*current)
+        
+        self.transition(l / self.fs)
 
         return len(output_items[0])
 </value>
@@ -341,7 +341,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>dwell_time</key>
-      <value>.1</value>
+      <value>3</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1040,11 +1040,11 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1040, 108)</value>
+      <value>(1048, 108)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2375,7 +2375,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -2562,7 +2562,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>fft_size</key>
@@ -2574,7 +2574,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1040, 448)</value>
+      <value>(1040, 472)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2594,7 +2594,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>peak_hold</key>
-      <value>False</value>
+      <value>True</value>
     </param>
     <param>
       <key>ref_level</key>
@@ -2665,7 +2665,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>fft_size</key>
@@ -2867,7 +2867,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>fft_rate</key>
