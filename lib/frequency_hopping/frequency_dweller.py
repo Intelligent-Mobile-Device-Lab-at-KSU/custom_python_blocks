@@ -48,53 +48,53 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
             in_sig=None, # no input
             out_sig=[np.complex64]       # have a dummy output
         )
-        self.samp_rate = long(sample_frequency)
+        self.fs = long(sample_frequency)
         self.message_port_register_out(pmt.intern('debug'))  # port to send on
 
         # setup loadins
         self.frequencies = frequencies
+        for i in range (num_frequencies):
+            self.frequencies[i] = self.frequencies[i] * 2 * np.pi
+        print(self.frequencies)
         self.num_frequencies = num_frequencies
         self.dwell_time = dwell_time
         self.index = 0
 
         # setup initial frequency stuff
         self.freq = self.frequencies[0]
-        self.sample_rate = 1/sample_frequency
 
-        self.last_switch = time.time()
+        self.time = 0
 
     def transition(self, t):
-        now = time.time()
-        if(now - self.last_switch > self.dwell_time):
-            # update timer
-            self.last_switch = now
-
+        if(self.time - self.dwell_time >= 0):
             # get frequency
             self.index = self.index + 1 
             if (self.index >= self.num_frequencies):
                 self.index = 0 
             self.freq = self.frequencies[self.index]
+
+            # update control vars
+            self.diff = self.diff + self.time
+            self.time = 0
         else:
-            return False
+            self.time = self.time + t
 
     def work(self, input_items, output_items):
         """example: multiply with constant"""
-
-        temp = 1.0/self.samp_rate
+        # subtract by this, helps restart when switching 
+        # freqs
+        self.diff = 0
 
         # Frequency Calculations -- fill in entire array
         # checks for this happen frequently
-        f = 2*np.pi*self.freq
-        for x in range(len(output_items[0])):
-            time = x * temp
-            imag = np.sin(f*time)
-            real = np.cos(f*time)
+        l = len(output_items[0])
+        for x in range(l):
+            t = (x / self.fs)
+            
+            imag = np.sin(self.freq*t)
+            real = np.cos(self.freq*t)
             output_items[0][x] = complex(real, imag)
-
-        # check for transition
-        if(self.transition(.4)):
-            self.jumps = self.jumps + 1
-            current = self.jumps%self.num
-            self.freq = self.base + (self.upper*current)
+        
+        self.transition(l / self.fs)
 
         return len(output_items[0])
