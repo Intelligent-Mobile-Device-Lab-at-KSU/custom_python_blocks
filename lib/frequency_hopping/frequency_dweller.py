@@ -67,6 +67,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
 
     def transition(self, t):
         if(self.time - self.dwell_time >= 0):
+
             # get frequency
             self.index = self.index + 1 
             if (self.index >= self.num_frequencies):
@@ -94,7 +95,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
             imag = np.sin(self.freq*t)
             real = np.cos(self.freq*t)
             output_items[0][x] = complex(real, imag)
-        
+                    
         self.transition(l / self.fs)
 
         return len(output_items[0])
